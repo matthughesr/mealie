@@ -32,10 +32,16 @@ def set_sqlite_pragma_journal_wal(dbapi_connection, connection_record):
 
 def sql_global_init(db_url: str):
     connect_args = {}
+    pool_args = {}
+
     if "sqlite" in db_url:
         connect_args["check_same_thread"] = False
+    elif "postgresql" in db_url:
+        # NullPool releases connections immediately after use, allowing serverless
+        # databases like Neon to scale to zero when the app is idle
+        pool_args["poolclass"] = sa.pool.NullPool
 
-    engine = sa.create_engine(db_url, echo=False, connect_args=connect_args, pool_pre_ping=True, future=True)
+    engine = sa.create_engine(db_url, echo=False, connect_args=connect_args, pool_pre_ping=True, future=True, **pool_args)
 
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
 
